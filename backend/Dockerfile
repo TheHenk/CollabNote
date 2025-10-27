@@ -1,36 +1,21 @@
-# Stage 1: Build
-FROM node:18-alpine AS builder
-
-# Set working directory
+# --- Build stage ---
+FROM node:20 AS build
 WORKDIR /app
-
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install dependencies
-RUN npm install --include=dev
-
-# Copy the rest of the application
+RUN npm ci
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Stage 2: Production
-FROM node:18-alpine
-
-# Set working directory
+# --- Runtime stage ---
+FROM node:20-slim
 WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
 
-# Copy only necessary files from the builder stage
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
-
-# Install only production dependencies
-RUN npm install --omit=dev
-
-# Expose the application port
+# IMPORTANT: tell the app & proxy which port to use
+ENV PORT=4000
 EXPOSE 4000
 
-# Start the application
 CMD ["node", "dist/main.js"]
