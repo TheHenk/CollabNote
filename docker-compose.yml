@@ -12,22 +12,16 @@ services:
       SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_KEY}"
       JWT_SECRET: "${JWT_SECRET}"
       JWT_EXPIRES_IN: 1d
-      COOLIFY_BRANCH: "master"
-      COOLIFY_URL: "https://backend.henkify.org"
-      COOLIFY_FQDN: backend.henkify.org
     restart: unless-stopped
-    container_name: backend
-    # TEMP: publish a debug port to bypass Caddy and test directly
+    # TEMP: publish a debug port so you can test without Caddy
     ports:
       - "4001:4000"
     networks:
       kw8oo4kk80so8080o0g0cgcw: {}
     labels:
-      # ---- Caddy (Coolify v4) ----
+      # Caddy (Coolify v4 style) – send domain traffic to container:4000
       - caddy_0=https://backend.henkify.org
-      # minimal reverse proxy rule directly to container's port 4000
       - caddy_0.reverse_proxy={{upstreams 4000}}
-      # optional niceties
       - caddy_0.encode=zstd gzip
       - caddy_0.header=-Server
       - caddy_ingress_network=kw8oo4kk80so8080o0g0cgcw
@@ -39,17 +33,12 @@ services:
     working_dir: /app
     environment:
       VITE_API_URL: "https://backend.henkify.org"
-      COOLIFY_BRANCH: "master"
-      COOLIFY_URL: "https://collabnotes.henkify.org"
-      COOLIFY_FQDN: collabnotes.henkify.org
     restart: unless-stopped
-    container_name: frontend
-    networks:
-      kw8oo4kk80so8080o0g0cgcw: {}
     depends_on:
       - backend
+    networks:
+      kw8oo4kk80so8080o0g0cgcw: {}
     labels:
-      # ---- Caddy (Coolify v4) ----
       - caddy_0=https://collabnotes.henkify.org
       - caddy_0.reverse_proxy={{upstreams}}
       - caddy_0.encode=zstd gzip
