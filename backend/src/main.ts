@@ -39,19 +39,19 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle("CollabNote API")
     .setDescription(
-      "Comprehensive API documentation for the CollabNote application, an intuitive collaborative notes platform.",
+      "Comprehensive API documentation for the CollabNote application, an intuitive collaborative notes platform."
     )
     .setVersion("1.0.0")
     .addBearerAuth()
     .setContact(
       "Son Nguyen",
       "https://github.com/hoangsonww",
-      "hoangson091104@gmail.com",
+      "hoangson091104@gmail.com"
     )
     .setLicense("MIT", "https://opensource.org/licenses/MIT")
     .addServer(
       "https://collabnote-fullstack-app.onrender.com",
-      "Production server",
+      "Production server"
     )
     .addServer("http://localhost:4000", "Development server")
     .build();
@@ -63,12 +63,18 @@ async function bootstrap() {
     customSiteTitle: "CollabNote API Documentation",
   });
 
-  // Start up the NestJS application
+  // Start up the NestJS application — bind to 0.0.0.0 so it’s reachable externally
   const port = configService.get<number>("PORT", 4000);
-  await app.listen(port, () => {
-    logger.log(`NestJS Backend running on port ${port}`);
-    logger.log(`Swagger API documentation available at /api`);
-  });
+  await app.listen(port, "0.0.0.0");
+
+  logger.log(`✅ NestJS Backend running on port ${port}`);
+  logger.log(`📘 Swagger API documentation available at /api`);
 }
 
-bootstrap();
+// Bootstrap the application
+bootstrap().catch((err) => {
+  // Catch startup errors for easier debugging
+  // eslint-disable-next-line no-console
+  console.error("❌ Error during NestJS bootstrap:", err);
+  process.exit(1);
+});
