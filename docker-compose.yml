@@ -50,7 +50,7 @@ services:
       dockerfile: Dockerfile
     working_dir: /app
     environment:
-      VITE_API_URL: https://backend.henkify.org
+      VITE_API_URL: https://backend.henkify.org:4000
       COOLIFY_BRANCH: '"master"'
       COOLIFY_CONTAINER_NAME: '"frontend-kw8oo4kk80so8080o0g0cgcw-121421738601"'
       COOLIFY_URL: 'https://collabnotes.henkify.org'
