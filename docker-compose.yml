@@ -17,30 +17,20 @@ services:
       COOLIFY_FQDN: backend.henkify.org
     restart: unless-stopped
     container_name: backend
-    expose:
-      - "4000"  # internal port the app listens on
-    labels:
-      # ---- Traefik (force service to port 4000) ----
-      - traefik.enable=true
-      - traefik.http.routers.backend-https.rule=Host(`backend.henkify.org`)
-      - traefik.http.routers.backend-https.entryPoints=https
-      - traefik.http.routers.backend-https.tls.certresolver=letsencrypt
-      - traefik.http.routers.backend-http.rule=Host(`backend.henkify.org`)
-      - traefik.http.routers.backend-http.entryPoints=http
-      - traefik.http.routers.backend-http.middlewares=redirect-to-https
-      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
-      - traefik.http.services.backend.loadbalancer.server.port=4000
-
-      # ---- Caddy (force reverse_proxy to port 4000) ----
-      - caddy_0=https://backend.henkify.org
-      - caddy_0.encode=zstd gzip
-      - caddy_0.handle_path=/*
-      - caddy_0.handle_path.0_reverse_proxy={{upstreams 4000}}
-      - caddy_0.header=-Server
-      - caddy_0.try_files={path} /index.html /index.php
-      - caddy_ingress_network=kw8oo4kk80so8080o0g0cgcw
+    # TEMP: publish a debug port to bypass Caddy and test directly
+    ports:
+      - "4001:4000"
     networks:
       kw8oo4kk80so8080o0g0cgcw: {}
+    labels:
+      # ---- Caddy (Coolify v4) ----
+      - caddy_0=https://backend.henkify.org
+      # minimal reverse proxy rule directly to container's port 4000
+      - caddy_0.reverse_proxy={{upstreams 4000}}
+      # optional niceties
+      - caddy_0.encode=zstd gzip
+      - caddy_0.header=-Server
+      - caddy_ingress_network=kw8oo4kk80so8080o0g0cgcw
 
   frontend:
     build:
@@ -54,29 +44,17 @@ services:
       COOLIFY_FQDN: collabnotes.henkify.org
     restart: unless-stopped
     container_name: frontend
-    labels:
-      # ---- Traefik ----
-      - traefik.enable=true
-      - traefik.http.routers.frontend-https.rule=Host(`collabnotes.henkify.org`)
-      - traefik.http.routers.frontend-https.entryPoints=https
-      - traefik.http.routers.frontend-https.tls.certresolver=letsencrypt
-      - traefik.http.routers.frontend-http.rule=Host(`collabnotes.henkify.org`)
-      - traefik.http.routers.frontend-http.entryPoints=http
-      - traefik.http.routers.frontend-http.middlewares=redirect-to-https
-      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
-
-      # ---- Caddy ----
-      - caddy_0=https://collabnotes.henkify.org
-      - caddy_0.encode=zstd gzip
-      - caddy_0.handle_path=/*
-      - caddy_0.handle_path.0_reverse_proxy={{upstreams}}
-      - caddy_0.header=-Server
-      - caddy_0.try_files={path} /index.html /index.php
-      - caddy_ingress_network=kw8oo4kk80so8080o0g0cgcw
-    depends_on:
-      - backend
     networks:
       kw8oo4kk80so8080o0g0cgcw: {}
+    depends_on:
+      - backend
+    labels:
+      # ---- Caddy (Coolify v4) ----
+      - caddy_0=https://collabnotes.henkify.org
+      - caddy_0.reverse_proxy={{upstreams}}
+      - caddy_0.encode=zstd gzip
+      - caddy_0.header=-Server
+      - caddy_ingress_network=kw8oo4kk80so8080o0g0cgcw
 
 networks:
   kw8oo4kk80so8080o0g0cgcw:
