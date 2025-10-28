@@ -1,38 +1,54 @@
-# coolify.yaml (Docker Compose file for production deployment)
-version: '3'
+# docker-compose.yml
+version: "3.9"
 services:
+  frontend:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+      args:
+        # Pass API endpoint base to frontend build (Vite will embed this in the SPA)
+        VITE_API_URL: ${VITE_API_URL}
+    # Nginx will serve the built frontend on port 80 inside the container
+    image: collabnote-frontend:latest
+    container_name: collabnote_frontend
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      # Frontend route: all requests on host collabnote.henkify.org (except /api handled below)
+      - "traefik.http.routers.collabnote-frontend.rule=Host(`collabnote.henkify.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.collabnote-frontend.entryPoints=websecure"
+      - "traefik.http.routers.collabnote-frontend.tls=true"
+      - "traefik.http.routers.collabnote-frontend.priority=1"
+      - "traefik.http.services.collabnote-frontend.loadbalancer.server.port=80"
+    networks:
+      - collabnote_net
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: collabnote-backend:latest
+    container_name: collabnote_backend
+    restart: unless-stopped
+    # Environment variables for Supabase and JWT (see .env.example)
     environment:
-      # Required backend env vars – fill these in Coolify UI before deploying
-      - SUPABASE_URL=${SUPABASE_URL:?}           # Supabase Project URL:contentReference[oaicite:2]{index=2}
-      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:?} # Supabase service role key:contentReference[oaicite:3]{index=3}
-      - JWT_SECRET=${JWT_SECRET:?}               # Secret for JWT signing:contentReference[oaicite:4]{index=4}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}     # JWT expiry (default 1d):contentReference[oaicite:5]{index=5}
-      - PORT=4000                                # Backend listens on port 4000:contentReference[oaicite:6]{index=6}
-    # No ports mapping; Coolify proxy will expose the service
-    # Traefik labels to route /api requests to this backend service
+      NODE_ENV: "production"
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      PORT: ${PORT}
     labels:
       - traefik.enable=true
+      # Backend route: API requests on /api path go to this service 
       - "traefik.http.routers.collabnote-backend.rule=Host(`collabnote.henkify.org`) && PathPrefix(`/api`)"
       - "traefik.http.routers.collabnote-backend.entryPoints=websecure"
-      - "traefik.http.routers.collabnote-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.collabnote-backend.middlewares=collabnote-stripprefix@docker"
-      - "traefik.http.middlewares.collabnote-stripprefix.stripPrefix.prefixes=/api"
+      - "traefik.http.routers.collabnote-backend.tls=true"
+      - "traefik.http.routers.collabnote-backend.priority=10"
       - "traefik.http.services.collabnote-backend.loadbalancer.server.port=4000"
-      
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    environment:
-      # Required frontend env var – will be used at build time for API calls
-      - VITE_API_URL=${VITE_API_URL:?}           # Base URL for API calls from frontend:contentReference[oaicite:7]{index=7}
-    labels:
-      - traefik.enable=true
-      - "traefik.http.routers.collabnote-frontend.rule=Host(`collabnote.henkify.org`)"
-      - "traefik.http.routers.collabnote-frontend.entryPoints=websecure"
-      - "traefik.http.routers.collabnote-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.collabnote-frontend.loadbalancer.server.port=3000"
+    networks:
+      - collabnote_net
+
+networks:
+  collabnote_net:
+    driver: bridge
