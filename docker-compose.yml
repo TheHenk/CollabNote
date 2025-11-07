@@ -1,26 +1,33 @@
-version: "3.8"
+version: '3.8'
 
 services:
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-    working_dir: /app/backend
-    command: ["node", "dist/main.js"]
-    ports:
-      - "4000:4000"
+    container_name: collabnote-backend
     environment:
-      NODE_ENV: production
-      PORT: 4000
-      JWT_SECRET: your_jwt_secret
-      DATABASE_URL: your_database_url
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=4000
+      - NODE_ENV=production
+    networks:
+      - collabnote-network
     restart: unless-stopped
 
   frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
-    working_dir: /app/frontend
-    ports:
-      - "3000:80"
+    container_name: collabnote-frontend
+    environment:
+      - VITE_API_URL=http://backend:4000
+      - NODE_ENV=production
+    networks:
+      - collabnote-network
     restart: unless-stopped
+
+networks:
+  collabnote-network:
+    driver: bridge
